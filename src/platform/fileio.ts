@@ -1,18 +1,30 @@
 /**
  * ファイル入出力の抽象化。
- * ブラウザ版は File API / ダウンロードを使う。デスクトップ化 (Electron / Tauri) の際は
- * この interface を満たす実装を用意して main.ts で差し替えるだけでよい。
- *   例: Electron なら preload で ipcRenderer.invoke('open-save') などを公開し、
- *       window.ets2JobmakerIO として渡す。
+ * - ブラウザ版: File API / ダウンロード (browserIO)
+ * - デスクトップ版 (Electron): electron/preload.cjs が window.ets2JobmakerIO を公開し、
+ *   ネイティブのファイルダイアログ・上書き保存・自動バックアップを提供する
  */
 export interface OpenedFile {
   name: string;
+  /** デスクトップ版のみ: フルパス */
+  path?: string;
   bytes: Uint8Array;
 }
 
+export interface SaveResult {
+  saved: boolean;
+  path?: string;
+  /** 上書き前に作成したバックアップのパス */
+  backupPath?: string | null;
+}
+
 export interface FileIO {
+  kind: 'browser' | 'electron';
   open(): Promise<OpenedFile | null>;
-  save(suggestedName: string, text: string): Promise<boolean>;
+  save(suggestedName: string, text: string): Promise<SaveResult>;
+  notifyDropped?(file: File): void;
+  showInFolder?(path: string): Promise<void>;
+  onMenu?(callback: (action: 'open' | 'save') => void): () => void;
 }
 
 declare global {
@@ -26,6 +38,7 @@ declare global {
 }
 
 export const browserIO: FileIO = {
+  kind: 'browser',
   open() {
     return new Promise((resolve) => {
       const input = document.createElement('input');
@@ -49,9 +62,9 @@ export const browserIO: FileIO = {
         const w = await h.createWritable();
         await w.write(blob);
         await w.close();
-        return true;
+        return { saved: true };
       } catch (e) {
-        if ((e as Error).name === 'AbortError') return false;
+        if ((e as Error).name === 'AbortError') return { saved: false };
       }
     }
     const a = document.createElement('a');
@@ -59,7 +72,7 @@ export const browserIO: FileIO = {
     a.download = name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    return true;
+    return { saved: true };
   },
 };
 

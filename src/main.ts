@@ -99,15 +99,18 @@ async function loadBytes(name: string, bytes: Uint8Array) {
     );
     return;
   }
+  await loadText(name, new TextDecoder('utf-8').decode(bytes));
+}
+
+async function loadText(name: string, text: string, notify = true) {
   try {
-    const text = new TextDecoder('utf-8').decode(bytes);
     const s = SaveGame.fromText(text);
     save = s;
     originalText = text;
     fileName = name;
     pending = [];
     onSaveLoaded();
-    toast(`${name} を読み込みました`);
+    if (notify) toast(`${name} を読み込みました`);
   } catch (e) {
     toast(`読み込みに失敗しました: ${(e as Error).message}`, 'error');
   }
@@ -407,8 +410,13 @@ async function exportSave() {
     // 元テキストから作り直して全件適用する (作成リストの削除をそのまま反映できる)
     const out = SaveGame.fromText(originalText);
     for (const p of pending) out.applyJob(p.spec);
-    const ok = await fileIO.save(fileName.endsWith('.sii') ? fileName : 'game.sii', out.serialize());
-    if (ok) toast(`${pending.length} 件の仕事を書き込んで保存しました`);
+    const r = await fileIO.save(fileName.endsWith('.sii') ? fileName : 'game.sii', out.serialize());
+    if (!r.saved) return;
+    let msg = `${pending.length} 件の仕事を書き込んで保存しました`;
+    if (r.backupPath) msg += `（元のファイルは ${r.backupPath.split(/[\\/]/).pop()} にバックアップ）`;
+    toast(msg);
+    // 保存した内容を新しい基準にして、続けて編集できるようにする
+    await loadText(fileName, out.serialize(), false);
   } catch (e) {
     toast(`書き出しに失敗しました: ${(e as Error).message}`, 'error');
   }
@@ -416,11 +424,16 @@ async function exportSave() {
 
 // ---- イベント -------------------------------------------------------------
 
-els.openBtn.onclick = async () => {
+async function openFile() {
   if (pending.length && !confirm('作成リストは破棄されます。別のファイルを開きますか？')) return;
   const f = await fileIO.open();
   if (f) await loadBytes(f.name, f.bytes);
-};
+}
+els.openBtn.onclick = openFile;
+fileIO.onMenu?.((action) => {
+  if (action === 'open') openFile();
+  else if (action === 'save' && save) exportSave();
+});
 els.exportBtn.onclick = exportSave;
 
 for (const t of [document.body]) {
@@ -433,7 +446,10 @@ for (const t of [document.body]) {
     e.preventDefault();
     els.dropZone.classList.remove('over');
     const f = e.dataTransfer?.files[0];
-    if (f) await loadBytes(f.name, new Uint8Array(await f.arrayBuffer()));
+    if (!f) return;
+    if (pending.length && !confirm('作成リストは破棄されます。別のファイルを開きますか？')) return;
+    fileIO.notifyDropped?.(f);
+    await loadBytes(f.name, new Uint8Array(await f.arrayBuffer()));
   });
 }
 
