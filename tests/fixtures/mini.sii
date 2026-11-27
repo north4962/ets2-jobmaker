@@ -1,0 +1,41 @@
+SiiNunit
+{
+economy : _nameless.1a6.2454.96b8 {
+ companies: 2
+ companies[0]: company.volatile.medas.athens
+ companies[1]: company.volatile.posped.sofia
+ game_time: 1500
+}
+
+company : company.volatile.medas.athens {
+ permanent_data: company.permanent.medas
+ job_offer: 1
+ job_offer[0]: _nameless.1a6.2f64.77e8
+ discovered: true
+ state: 0
+}
+
+job_offer_data : _nameless.1a6.2f64.77e8 {
+ target: "posped.sofia"
+ expiration_time: 1800
+ urgency: 1
+ shortest_distance_km: 441
+ ferry_time: 0
+ ferry_price: 0
+ cargo: cargo.used_plast
+ company_truck: daf_xd_2
+ trailer_variant: trailer.scs_dry_s
+ trailer_definition: trailer_def.scs.box.single_3.dryvan
+ units_count: 33
+ fill_ratio: 1
+ trailer_place: 0
+}
+
+company : company.volatile.posped.sofia {
+ permanent_data: company.permanent.posped
+ job_offer: 0
+ discovered: true
+ state: 0
+}
+
+}

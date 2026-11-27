@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.sii
+!tests/fixtures/*.sii
