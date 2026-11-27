@@ -1,5 +1,5 @@
 import './ui/style.css';
-import { detectFormat } from './core/sii';
+import { decodeSaveFile, type SaveFormat } from './core/decrypt';
 import { SaveGame, formatGameTime, isEmptyOffer, type JobOffer, type JobSpec } from './core/save';
 import { fileIO } from './platform/fileio';
 
@@ -51,6 +51,8 @@ let save: SaveGame | null = null;
 let originalText = '';
 let fileName = 'game.sii';
 let pending: Pending[] = [];
+/** 読み込んだファイルの元の形式 (暗号化 / バイナリなら保存時にテキストへ変換される) */
+let sourceFormat: SaveFormat = 'text';
 let uidSeq = 1;
 
 const URGENCY = ['標準', '重要', '緊急'];
@@ -88,37 +90,72 @@ const sourceId = () => (save?.companyByKey.get(els.source.value.trim()) ?? '');
 
 // ---- 読み込み -------------------------------------------------------------
 
+const FORMAT_LABEL: Partial<Record<SaveFormat, string>> = {
+  encrypted: '暗号化 (ScsC)',
+  binary: 'バイナリ (BSII)',
+};
+
 async function loadBytes(name: string, bytes: Uint8Array) {
-  const fmt = detectFormat(bytes);
-  if (fmt === 'encrypted' || fmt === 'binary') {
-    toast(
-      fmt === 'encrypted'
-        ? 'このファイルは暗号化されています。SII_Decrypt などで復号化してから読み込んでください。'
-        : 'バイナリ形式 (BSII) です。テキスト形式に復号化してから読み込んでください。',
-      'error',
-    );
-    return;
-  }
+  setBusy(true, '読み込み中…');
+  // 重い処理の前に「読み込み中」を描画させる
+  await new Promise((r) => setTimeout(r, 30));
   try {
-    const text = new TextDecoder('utf-8').decode(bytes);
+    const decoded = decodeSaveFile(bytes);
+    const ok = await loadText(name, decoded.text, false);
+    if (!ok) return;
+    sourceFormat = decoded.sourceFormat;
+    renderFileInfo();
+    if (decoded.sourceFormat === 'text') toast(`${name} を読み込みました`);
+    else {
+      const how = [FORMAT_LABEL[decoded.sourceFormat], decoded.sourceFormat !== decoded.innerFormat ? FORMAT_LABEL[decoded.innerFormat] : '']
+        .filter(Boolean)
+        .join(' → ');
+      toast(`${name} を復号化して読み込みました (${how})`);
+    }
+  } catch (e) {
+    toast(`読み込みに失敗しました: ${(e as Error).message}`, 'error');
+  } finally {
+    setBusy(false);
+  }
+}
+
+function setBusy(busy: boolean, label = '') {
+  els.openBtn.disabled = busy;
+  els.exportBtn.disabled = busy || !save;
+  document.body.classList.toggle('busy', busy);
+  if (busy) els.fileInfo.textContent = label;
+  else if (save) renderFileInfo();
+  else els.fileInfo.textContent = 'セーブデータ未読み込み';
+}
+
+async function loadText(name: string, text: string, notify = true): Promise<boolean> {
+  try {
     const s = SaveGame.fromText(text);
     save = s;
     originalText = text;
     fileName = name;
     pending = [];
     onSaveLoaded();
-    toast(`${name} を読み込みました`);
+    if (notify) toast(`${name} を読み込みました`);
+    return true;
   } catch (e) {
     toast(`読み込みに失敗しました: ${(e as Error).message}`, 'error');
+    return false;
   }
+}
+
+function renderFileInfo() {
+  if (!save) return;
+  const offers = [...save.offers.values()].filter((o) => !isEmptyOffer(o)).length;
+  const fmt = FORMAT_LABEL[sourceFormat] ? ` (${FORMAT_LABEL[sourceFormat]}から復号)` : '';
+  els.fileInfo.textContent =
+    `${fileName}${fmt} ／ ${formatGameTime(save.gameTime)} ／ 会社 ${save.companies.size} ／ ` +
+    `オファー ${offers} ／ カーゴ ${save.cargoes.size}`;
 }
 
 function onSaveLoaded() {
   if (!save) return;
-  const offers = [...save.offers.values()].filter((o) => !isEmptyOffer(o)).length;
-  els.fileInfo.textContent =
-    `${fileName} ／ ${formatGameTime(save.gameTime)} ／ 会社 ${save.companies.size} ／ ` +
-    `オファー ${offers} ／ カーゴ ${save.cargoes.size}`;
+  renderFileInfo();
   els.dropZone.hidden = true;
   els.editor.hidden = false;
   els.exportBtn.disabled = false;
@@ -402,13 +439,31 @@ function renderPending() {
 
 async function exportSave() {
   if (!save) return;
-  if (!pending.length && !confirm('作成リストが空です。変更なしで書き出しますか？')) return;
+  const decrypted = sourceFormat !== 'text';
+  if (
+    !pending.length &&
+    !confirm(
+      decrypted
+        ? '作成リストが空です。復号化したテキスト形式の game.sii として保存しますか？'
+        : '作成リストが空です。変更なしで書き出しますか？',
+    )
+  )
+    return;
   try {
     // 元テキストから作り直して全件適用する (作成リストの削除をそのまま反映できる)
     const out = SaveGame.fromText(originalText);
     for (const p of pending) out.applyJob(p.spec);
-    const ok = await fileIO.save(fileName.endsWith('.sii') ? fileName : 'game.sii', out.serialize());
-    if (ok) toast(`${pending.length} 件の仕事を書き込んで保存しました`);
+    const r = await fileIO.save(fileName.endsWith('.sii') ? fileName : 'game.sii', out.serialize());
+    if (!r.saved) return;
+    let msg = pending.length
+      ? `${pending.length} 件の仕事を書き込んで保存しました`
+      : '復号化したテキスト形式で保存しました';
+    if (r.backupPath) msg += `（元のファイルは ${r.backupPath.split(/[\\/]/).pop()} にバックアップ）`;
+    toast(msg);
+    // 保存した内容を新しい基準にして、続けて編集できるようにする
+    await loadText(fileName, out.serialize(), false);
+    sourceFormat = 'text';
+    renderFileInfo();
   } catch (e) {
     toast(`書き出しに失敗しました: ${(e as Error).message}`, 'error');
   }
@@ -416,11 +471,16 @@ async function exportSave() {
 
 // ---- イベント -------------------------------------------------------------
 
-els.openBtn.onclick = async () => {
+async function openFile() {
   if (pending.length && !confirm('作成リストは破棄されます。別のファイルを開きますか？')) return;
   const f = await fileIO.open();
   if (f) await loadBytes(f.name, f.bytes);
-};
+}
+els.openBtn.onclick = openFile;
+fileIO.onMenu?.((action) => {
+  if (action === 'open') openFile();
+  else if (action === 'save' && save) exportSave();
+});
 els.exportBtn.onclick = exportSave;
 
 for (const t of [document.body]) {
@@ -433,7 +493,10 @@ for (const t of [document.body]) {
     e.preventDefault();
     els.dropZone.classList.remove('over');
     const f = e.dataTransfer?.files[0];
-    if (f) await loadBytes(f.name, new Uint8Array(await f.arrayBuffer()));
+    if (!f) return;
+    if (pending.length && !confirm('作成リストは破棄されます。別のファイルを開きますか？')) return;
+    fileIO.notifyDropped?.(f);
+    await loadBytes(f.name, new Uint8Array(await f.arrayBuffer()));
   });
 }
 

@@ -30,3 +30,14 @@ describe.skipIf(!path)('実セーブデータ', () => {
     expect(out.split('\r\n').length - text.split('\r\n').length).toBe(17); // 新規ユニット 15 行 + 空行 + job_offer[n] 行
   });
 });
+
+describe.skipIf(!path)('実セーブデータの暗号化 → 復号', () => {
+  test('BSII + ScsC に変換して復号するとバイト単位で一致する', async () => {
+    const { encodeBsii, encryptScsC } = await import('./helpers/bsii-encode');
+    const { decodeSaveFile } = await import('../src/core/decrypt');
+    const text = readFileSync(path!, 'utf8');
+    const d = decodeSaveFile(encryptScsC(encodeBsii(text)));
+    expect(d.innerFormat).toBe('binary');
+    expect(d.text === text).toBe(true);
+  });
+});

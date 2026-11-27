@@ -9,12 +9,79 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "concurrently -k -n vite,electron \"vite --strictPort\" \"wait-on tcp:localhost:5173 && electron . --dev\"",
+    "electron:start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:win-zip": "npm run build && electron-builder --win zip --x64 -c.win.artifactName='${productName}-${version}-win-x64.${ext}'"
   },
   "devDependencies": {
     "@types/node": "^22.20.7",
+    "concurrently": "^9.2.5",
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0",
     "typescript": "^5.6.3",
     "vite": "^6.0.7",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.5",
+    "wait-on": "^8.0.5"
+  },
+  "main": "electron/main.cjs",
+  "author": "ets2-jobmaker",
+  "build": {
+    "appId": "io.github.ets2jobmaker",
+    "productName": "ETS2 Job Maker",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    }
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
   }
 }

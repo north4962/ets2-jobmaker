@@ -29,14 +29,6 @@ const UNIT_START = /^(\w+)\s*:\s*([^\s{]+)\s*\{\s*$/;
 
 export class SiiParseError extends Error {}
 
-export function detectFormat(head: Uint8Array): 'text' | 'encrypted' | 'binary' | 'unknown' {
-  const magic = String.fromCharCode(...head.slice(0, 8));
-  if (magic.startsWith('SiiNunit')) return 'text';
-  if (magic.startsWith('ScsC')) return 'encrypted';
-  if (magic.startsWith('BSII')) return 'binary';
-  return 'unknown';
-}
-
 export function parseSii(text: string): SiiDocument {
   const eol: '\r\n' | '\n' = text.includes('\r\n') ? '\r\n' : '\n';
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);

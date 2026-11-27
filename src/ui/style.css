@@ -132,3 +132,5 @@ td.empty { color: var(--muted); text-align: center; padding: 16px; }
 }
 .toast.error { border-color: var(--error); color: var(--error); }
 .toast.ok { border-color: var(--accent); }
+
+body.busy, body.busy * { cursor: progress !important; }

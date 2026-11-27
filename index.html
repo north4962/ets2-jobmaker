@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://localhost:*"
+    />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <title>ETS2 Job Maker</title>
   </head>
   <body>
@@ -17,11 +22,11 @@
 
     <main id="app">
       <section id="dropZone" class="drop-zone">
-        <p><strong>復号化済みの game.sii</strong> をここにドラッグ＆ドロップ、または「game.sii を開く」を押してください。</p>
+        <p><strong>game.sii</strong> をここにドラッグ＆ドロップ、または「game.sii を開く」を押してください。<br />
+          暗号化されたままのセーブ (ScsC / バイナリ形式) も、そのまま開けば自動で復号化されます。</p>
         <ol>
-          <li>ゲームを終了し、プロファイルの <code>save/&lt;セーブ名&gt;/game.sii</code> をバックアップする</li>
-          <li>SII_Decrypt などで game.sii を復号化する</li>
-          <li>このツールで仕事を作成し、書き出した game.sii を元の場所に上書きする</li>
+          <li>ゲームを終了し、プロファイルの <code>save/&lt;セーブ名&gt;/game.sii</code> を開く</li>
+          <li>仕事を作成し、「保存」で元の場所に上書きする (デスクトップ版は自動でバックアップを作成)</li>
           <li>ゲームでそのセーブをロードし、出発会社の「貨物市場」から仕事を受ける</li>
         </ol>
       </section>

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { getArray, parseSii, serializeSii, setArray, detectFormat } from '../src/core/sii';
+import { getArray, parseSii, serializeSii, setArray } from '../src/core/sii';
 import { SaveGame, bigIntToNameless, formatGameTime, namelessToBigInt, type JobSpec } from '../src/core/save';
 
 const text = readFileSync(new URL('./fixtures/mini.sii', import.meta.url), 'utf8');
@@ -26,11 +26,6 @@ describe('sii', () => {
     setArray(u, 'job_offer', ['a', 'b']);
     expect(getArray(u, 'job_offer')).toEqual(['a', 'b']);
     expect(u.attrs.map((a) => a[0])).toEqual(['permanent_data', 'job_offer', 'job_offer[0]', 'job_offer[1]', 'discovered', 'state']);
-  });
-  test('形式判定', () => {
-    expect(detectFormat(new TextEncoder().encode('SiiNunit'))).toBe('text');
-    expect(detectFormat(new TextEncoder().encode('ScsC....'))).toBe('encrypted');
-    expect(detectFormat(new TextEncoder().encode('BSII....'))).toBe('binary');
   });
 });
 
