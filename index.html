@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ETS2 Job Maker</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>ETS2 Job Maker</h1>
+      <div class="file-info" id="fileInfo">セーブデータ未読み込み</div>
+      <div class="actions">
+        <button id="openBtn" class="primary">game.sii を開く</button>
+        <button id="exportBtn" disabled>保存 (書き出し)</button>
+      </div>
+    </header>
+
+    <main id="app">
+      <section id="dropZone" class="drop-zone">
+        <p><strong>復号化済みの game.sii</strong> をここにドラッグ＆ドロップ、または「game.sii を開く」を押してください。</p>
+        <ol>
+          <li>ゲームを終了し、プロファイルの <code>save/&lt;セーブ名&gt;/game.sii</code> をバックアップする</li>
+          <li>SII_Decrypt などで game.sii を復号化する</li>
+          <li>このツールで仕事を作成し、書き出した game.sii を元の場所に上書きする</li>
+          <li>ゲームでそのセーブをロードし、出発会社の「貨物市場」から仕事を受ける</li>
+        </ol>
+      </section>
+
+      <div id="editor" class="editor" hidden>
+        <form id="jobForm" class="panel" autocomplete="off">
+          <h2>仕事を作成</h2>
+
+          <fieldset>
+            <legend>出発地</legend>
+            <label>出発会社
+              <input id="source" list="companyList" placeholder="例: posped.berlin" required />
+            </label>
+            <label class="check"><input type="checkbox" id="discoveredOnly" checked /> 発見済みの会社のみ候補に表示</label>
+            <label>スロット
+              <select id="slot"></select>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>貨物</legend>
+            <label>カーゴ
+              <input id="cargo" list="cargoList" placeholder="例: cargo.used_plast" required />
+            </label>
+            <label>トレーラー (セーブ内の実績)
+              <select id="trailerPreset"></select>
+            </label>
+            <div class="grid2">
+              <label>trailer_variant<input id="trailerVariant" required /></label>
+              <label>trailer_definition<input id="trailerDefinition" required /></label>
+              <label>積載数 (units_count)<input id="unitsCount" type="number" min="1" step="1" required /></label>
+              <label>fill_ratio<input id="fillRatio" type="number" min="0.01" max="1" step="0.01" value="1" required /></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>配送先</legend>
+            <label>配送先の会社
+              <input id="target" list="targetList" placeholder="例: lkwlog.frankfurt" required />
+            </label>
+            <label class="check"><input type="checkbox" id="acceptedOnly" checked /> このカーゴの受入実績がある会社のみ候補に表示</label>
+            <div class="grid3">
+              <label>距離 (km)<input id="distance" type="number" min="1" step="1" required /></label>
+              <label>フェリー時間 (分)<input id="ferryTime" type="number" min="0" step="1" value="0" /></label>
+              <label>フェリー料金<input id="ferryPrice" type="number" min="0" step="1" value="0" /></label>
+            </div>
+            <p class="hint" id="routeHint"></p>
+          </fieldset>
+
+          <fieldset>
+            <legend>条件</legend>
+            <div class="grid3">
+              <label>緊急度
+                <select id="urgency">
+                  <option value="0">標準</option>
+                  <option value="1">重要</option>
+                  <option value="2">緊急</option>
+                </select>
+              </label>
+              <label>掲載期限 (ゲーム内 時間)<input id="expiration" type="number" min="1" step="1" value="72" required /></label>
+              <label>会社トラック<input id="truck" list="truckList" required /></label>
+            </div>
+          </fieldset>
+
+          <ul id="messages" class="messages"></ul>
+          <div class="form-actions">
+            <button type="submit" class="primary" id="addBtn">作成リストに追加</button>
+            <button type="button" id="resetBtn">入力をクリア</button>
+          </div>
+        </form>
+
+        <div class="side">
+          <section class="panel">
+            <h2>作成リスト <span class="badge" id="pendingCount">0</span></h2>
+            <p class="hint">「保存 (書き出し)」で、ここにある仕事をすべて書き込んだ game.sii を出力します。</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>出発</th><th>配送先</th><th>カーゴ</th><th>km</th><th>スロット</th><th></th></tr></thead>
+                <tbody id="pendingBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>出発会社の現在のオファー</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>配送先</th><th>カーゴ</th><th>km</th><th>期限</th><th></th></tr></thead>
+                <tbody id="offersBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <datalist id="companyList"></datalist>
+    <datalist id="targetList"></datalist>
+    <datalist id="cargoList"></datalist>
+    <datalist id="truckList"></datalist>
+    <div id="toast" class="toast" hidden></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
