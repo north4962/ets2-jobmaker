@@ -80,5 +80,8 @@
       ],
       "category": "Utility"
     }
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
   }
 }
