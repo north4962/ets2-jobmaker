@@ -59,8 +59,19 @@ npm run dist:win-zip     # Windows 用 zip (Linux / macOS からでも Wine な�
 ```
 
 - Windows のインストーラー / ポータブル版は Windows 上でビルドしてください (Linux からは Wine が必要)。
-- GitHub Actions (`.github/workflows/build-desktop.yml`) でも Windows 版をビルドできます。
-  Actions タブから手動実行するか、`v0.1.0` のようなタグを push すると、成果物 (exe) がダウンロードできます。
+- GitHub Actions (`.github/workflows/build-desktop.yml`) でも Windows 版をビルドできます。Actions タブから手動実行するとビルドのみ行い、成果物は実行結果ページからダウンロードできます。
+
+### リリースの作成
+
+`package.json` の `version` を上げて `main` にマージしたあと、同じバージョンのタグを push します。
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+GitHub Actions が Windows 版をビルドし、そのタグ名の GitHub Release を作成してインストーラー / ポータブル版の exe を添付します (リリースノートは自動生成)。
+
 - コード署名はしていないため、初回起動時に Windows SmartScreen の警告が出ることがあります。
 
 ## Web 版としての開発

@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit",
     "electron:dev": "concurrently -k -n vite,electron \"vite --strictPort\" \"wait-on tcp:localhost:5173 && electron . --dev\"",
     "electron:start": "npm run build && electron .",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:win-zip": "npm run build && electron-builder --win zip --x64 -c.win.artifactName='${productName}-${version}-win-x64.${ext}'"
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "dist:win-zip": "npm run build && electron-builder --publish never --win zip --x64 -c.win.artifactName='${productName}-${version}-win-x64.${ext}'"
   },
   "devDependencies": {
     "@types/node": "^22.20.7",
